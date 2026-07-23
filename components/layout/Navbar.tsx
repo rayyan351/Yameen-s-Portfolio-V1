@@ -103,6 +103,7 @@ export default function Navbar() {
           >
             {/* Theme-aware minimalistic YM Badge */}
             <div
+              data-loader-logo-target
               className={cn(
                 "relative w-8 h-8 flex items-center justify-center rounded-sm font-sans text-xs tracking-tighter overflow-hidden transition-all duration-500 ease-out group-hover:rotate-[360deg]",
                 theme === 'dark'

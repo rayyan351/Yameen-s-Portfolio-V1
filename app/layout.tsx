@@ -3,6 +3,7 @@ import { Cormorant_Garamond, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font
 import "./globals.css";
 import SmoothScroll from "@/components/layout/SmoothScroll";
 import Navbar from "@/components/layout/Navbar";
+import EntranceLoader from '@/components/layout/EntranceLoader';
 
 // Editorial Serif Pairing
 const cormorantGaramond = Cormorant_Garamond({
@@ -46,7 +47,7 @@ export default function RootLayout({
       <body className="min-h-dvh w-full min-w-0 max-w-full overflow-x-clip bg-paper text-ink selection:bg-clay selection:text-paper antialiased flex flex-col">
         {/* Fixed paper texture */}
         <div className="grain-overlay" aria-hidden="true" />
-        
+          <EntranceLoader />
         <SmoothScroll>
           <Navbar />
           <main
