@@ -10,6 +10,7 @@ import { gsap } from 'gsap';
 import { useReducedMotion } from '@/hooks/useReducedMotion';
 
 const NAV_LOGO_SELECTOR = '[data-loader-logo-target]';
+const SESSION_KEY = 'yameen-portfolio-entrance-seen';
 
 export default function EntranceLoader() {
   const rootRef = useRef<HTMLDivElement>(null);
@@ -24,13 +25,20 @@ export default function EntranceLoader() {
   const auraRef = useRef<HTMLDivElement>(null);
   const yameenWordRef = useRef<HTMLSpanElement>(null);
   const munirWordRef = useRef<HTMLSpanElement>(null);
+  const hintRef = useRef<HTMLDivElement>(null);
+  const hintLineRef = useRef<HTMLSpanElement>(null);
+  const hintDotRef = useRef<HTMLSpanElement>(null);
 
   const introTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const exitTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const hoverTimelineRef = useRef<gsap.core.Timeline | null>(null);
+  const hintLoopRef = useRef<gsap.core.Timeline | null>(null);
   const completedRef = useRef(false);
   const scrollLockCleanupRef = useRef<(() => void) | null>(null);
   const previousOverscrollRef = useRef('');
+  const previousScrollBehaviorRef = useRef('');
+  const previousScrollRestorationRef = useRef<ScrollRestoration>('auto');
+  const lockedScrollYRef = useRef(0);
 
   const [visible, setVisible] = useState(true);
   const [entering, setEntering] = useState(false);
@@ -39,8 +47,16 @@ export default function EntranceLoader() {
   const unlockPage = useCallback(() => {
     scrollLockCleanupRef.current?.();
     scrollLockCleanupRef.current = null;
+
     document.documentElement.style.overscrollBehavior =
       previousOverscrollRef.current;
+    document.documentElement.style.scrollBehavior =
+      previousScrollBehaviorRef.current;
+
+    if ('scrollRestoration' in window.history) {
+      window.history.scrollRestoration =
+        previousScrollRestorationRef.current;
+    }
   }, []);
 
   const completeEntrance = useCallback(() => {
@@ -52,6 +68,12 @@ export default function EntranceLoader() {
         clearProps:
           'opacity,visibility,pointerEvents,transition',
       });
+    }
+
+    try {
+      window.sessionStorage.setItem(SESSION_KEY, 'true');
+    } catch {
+      // The entrance still works if browser storage is unavailable.
     }
 
     completedRef.current = true;
@@ -67,6 +89,24 @@ export default function EntranceLoader() {
   useLayoutEffect(() => {
     if (typeof window === 'undefined') return;
 
+    try {
+      const alreadySeen =
+        window.sessionStorage.getItem(SESSION_KEY) === 'true';
+
+      if (alreadySeen) {
+        completedRef.current = true;
+        setVisible(false);
+
+        window.dispatchEvent(
+          new CustomEvent('portfolio:entrance-complete')
+        );
+
+        return;
+      }
+    } catch {
+      // Continue normally if browser storage is unavailable.
+    }
+
     const root = rootRef.current;
     const mark = markRef.current;
     const button = buttonRef.current;
@@ -76,6 +116,9 @@ export default function EntranceLoader() {
     const innerBorder = innerBorderRef.current;
     const sweep = sweepRef.current;
     const aura = auraRef.current;
+    const hint = hintRef.current;
+    const hintLine = hintLineRef.current;
+    const hintDot = hintDotRef.current;
 
     if (
       !root ||
@@ -86,43 +129,100 @@ export default function EntranceLoader() {
       !corner ||
       !innerBorder ||
       !sweep ||
-      !aura
+      !aura ||
+      !hint ||
+      !hintLine ||
+      !hintDot
     ) {
       setVisible(false);
       return;
     }
 
     /*
-     * Keep the browser scrollbar exactly as it is and block scrolling through
-     * non-passive event listeners instead. Hiding/restoring the scrollbar was
-     * the source of the temporary white strip and the final horizontal reflow.
+     * Keep the scrollbar visible so the layout width never changes, but block
+     * every user-driven scroll path until the entrance handoff has completed.
+     * The scroll guard also catches scrollbar dragging and smooth-scroll tools.
      */
     previousOverscrollRef.current =
       document.documentElement.style.overscrollBehavior;
+    previousScrollBehaviorRef.current =
+      document.documentElement.style.scrollBehavior;
+
+    if ('scrollRestoration' in window.history) {
+      previousScrollRestorationRef.current =
+        window.history.scrollRestoration;
+      window.history.scrollRestoration = 'manual';
+    }
+
     document.documentElement.style.overscrollBehavior = 'none';
+    document.documentElement.style.scrollBehavior = 'auto';
+
+    window.scrollTo({ top: 0, left: 0, behavior: 'auto' });
+    lockedScrollYRef.current = 0;
+
+    let correctingScroll = false;
+
+    const enforceLockedPosition = () => {
+      if (
+        correctingScroll ||
+        Math.abs(window.scrollY - lockedScrollYRef.current) < 0.5
+      ) {
+        return;
+      }
+
+      correctingScroll = true;
+      window.scrollTo({
+        top: lockedScrollYRef.current,
+        left: 0,
+        behavior: 'auto',
+      });
+
+      window.requestAnimationFrame(() => {
+        correctingScroll = false;
+      });
+    };
 
     const preventScroll = (event: Event) => {
       event.preventDefault();
+      enforceLockedPosition();
     };
 
     const preventScrollKeys = (event: KeyboardEvent) => {
       if (
-        ['ArrowUp', 'ArrowDown', 'PageUp', 'PageDown', 'Home', 'End'].includes(
-          event.key
-        )
+        [
+          'ArrowUp',
+          'ArrowDown',
+          'PageUp',
+          'PageDown',
+          'Home',
+          'End',
+          ' ',
+          'Spacebar',
+        ].includes(event.key)
       ) {
         event.preventDefault();
+        enforceLockedPosition();
       }
     };
 
-    window.addEventListener('wheel', preventScroll, { passive: false });
-    window.addEventListener('touchmove', preventScroll, { passive: false });
-    window.addEventListener('keydown', preventScrollKeys);
+    window.addEventListener('wheel', preventScroll, {
+      passive: false,
+      capture: true,
+    });
+    window.addEventListener('touchmove', preventScroll, {
+      passive: false,
+      capture: true,
+    });
+    window.addEventListener('keydown', preventScrollKeys, true);
+    window.addEventListener('scroll', enforceLockedPosition, {
+      passive: true,
+    });
 
     scrollLockCleanupRef.current = () => {
-      window.removeEventListener('wheel', preventScroll);
-      window.removeEventListener('touchmove', preventScroll);
-      window.removeEventListener('keydown', preventScrollKeys);
+      window.removeEventListener('wheel', preventScroll, true);
+      window.removeEventListener('touchmove', preventScroll, true);
+      window.removeEventListener('keydown', preventScrollKeys, true);
+      window.removeEventListener('scroll', enforceLockedPosition);
     };
 
     const navLogo =
@@ -167,6 +267,21 @@ export default function EntranceLoader() {
 
     gsap.set([yameenWordRef.current, munirWordRef.current], {
       autoAlpha: 0,
+    });
+
+    gsap.set(hint, {
+      autoAlpha: 0,
+      y: 8,
+    });
+
+    gsap.set(hintLine, {
+      scaleY: 0,
+      transformOrigin: 'bottom center',
+    });
+
+    gsap.set(hintDot, {
+      autoAlpha: 0,
+      y: 16,
     });
 
     introTimelineRef.current = gsap
@@ -227,7 +342,51 @@ export default function EntranceLoader() {
           ease: 'power2.out',
         },
         0
+      )
+      .to(
+        hint,
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.5,
+          ease: 'power3.out',
+        },
+        0.48
+      )
+      .to(
+        hintLine,
+        {
+          scaleY: 1,
+          duration: 0.42,
+          ease: 'power2.out',
+        },
+        0.56
       );
+
+    hintLoopRef.current = gsap
+      .timeline({
+        repeat: -1,
+        repeatDelay: 1.15,
+        delay: 1.15,
+      })
+      .fromTo(
+        hintDot,
+        {
+          autoAlpha: 0,
+          y: 16,
+        },
+        {
+          autoAlpha: 1,
+          y: 0,
+          duration: 0.7,
+          ease: 'power2.out',
+        }
+      )
+      .to(hintDot, {
+        autoAlpha: 0,
+        duration: 0.24,
+        ease: 'power1.out',
+      });
 
     const focusTimer = window.setTimeout(() => {
       button.focus({ preventScroll: true });
@@ -239,6 +398,7 @@ export default function EntranceLoader() {
       introTimelineRef.current?.kill();
       exitTimelineRef.current?.kill();
       hoverTimelineRef.current?.kill();
+      hintLoopRef.current?.kill();
 
       if (!completedRef.current) {
         unlockPage();
@@ -261,13 +421,15 @@ export default function EntranceLoader() {
     const sweep = sweepRef.current;
     const aura = auraRef.current;
     const openLabel = openLabelRef.current;
+    const hint = hintRef.current;
 
     if (
       !button ||
       !innerBorder ||
       !sweep ||
       !aura ||
-      !openLabel
+      !openLabel ||
+      !hint
     ) {
       return;
     }
@@ -328,6 +490,16 @@ export default function EntranceLoader() {
           ease: 'power2.inOut',
         },
         0.04
+      )
+      .to(
+        hint,
+        {
+          autoAlpha: 0.42,
+          y: 2,
+          duration: 0.32,
+          ease: 'power2.out',
+        },
+        0
       )
       .to(
         yameenWordRef.current,
@@ -411,6 +583,13 @@ export default function EntranceLoader() {
       ease: 'power3.out',
     });
 
+    gsap.to(hintRef.current, {
+      autoAlpha: 1,
+      y: 0,
+      duration: 0.45,
+      ease: 'power3.out',
+    });
+
     gsap.to(
       [yameenWordRef.current, munirWordRef.current],
       {
@@ -433,6 +612,7 @@ export default function EntranceLoader() {
     const corner = cornerRef.current;
     const innerBorder = innerBorderRef.current;
     const aura = auraRef.current;
+    const hint = hintRef.current;
 
     if (
       !root ||
@@ -443,7 +623,8 @@ export default function EntranceLoader() {
       !ymLabel ||
       !corner ||
       !innerBorder ||
-      !aura
+      !aura ||
+      !hint
     ) {
       completeEntrance();
       return;
@@ -453,6 +634,7 @@ export default function EntranceLoader() {
 
     introTimelineRef.current?.kill();
     hoverTimelineRef.current?.kill();
+    hintLoopRef.current?.kill();
 
     gsap.killTweensOf([
       mark,
@@ -462,6 +644,7 @@ export default function EntranceLoader() {
       corner,
       innerBorder,
       aura,
+      hint,
       yameenWordRef.current,
       munirWordRef.current,
     ]);
@@ -661,6 +844,16 @@ const targetRadius =
           ease: 'power2.out',
         },
         0.12
+      )
+      .to(
+        hint,
+        {
+          autoAlpha: 0,
+          y: 8,
+          duration: 0.22,
+          ease: 'power2.in',
+        },
+        0
       )
       .to(
         [yameenWordRef.current, munirWordRef.current],
@@ -886,6 +1079,49 @@ const targetRadius =
             bg-[#C47C5A]/42
           "
         />
+      </div>
+
+      <div
+        ref={hintRef}
+        aria-hidden="true"
+        className="
+          pointer-events-none absolute left-1/2 top-1/2 z-[8]
+          mt-[66px] -translate-x-1/2
+          sm:mt-[74px]
+        "
+      >
+        <div className="flex flex-col items-center">
+          <span
+            ref={hintLineRef}
+            className="
+              relative h-8 w-px
+              bg-gradient-to-t
+              from-[#C47C5A]/70
+              to-[#1B1B18]/12
+            "
+          >
+            <span
+              ref={hintDotRef}
+              className="
+                absolute -top-0.5 left-1/2
+                h-1.5 w-1.5 -translate-x-1/2
+                rounded-full bg-[#C47C5A]
+              "
+            />
+          </span>
+
+          <span
+            className="
+              mt-3 whitespace-nowrap
+              font-mono text-[8px] font-bold
+              uppercase tracking-[0.18em]
+              text-[#1B1B18]/48
+              sm:text-[8.5px]
+            "
+          >
+            Click to enter
+          </span>
+        </div>
       </div>
 
       <div
