@@ -1,0 +1,527 @@
+@import "tailwindcss";
+
+:root {
+  --paper: #F2EFE7;
+  --forest: #1C2822;
+  --ink: #1B1B18;
+  --cream: #F5F1E8;
+  --stone: #77776F;
+  --clay: #C47C5A;
+  --sage: #9BA68F;
+  --taupe: #D7D1C4;
+
+  --line-dark: rgba(27, 27, 24, 0.14);
+  --line-light: rgba(245, 241, 232, 0.16);
+  --paper-glass: rgba(242, 239, 231, 0.72);
+  --forest-glass: rgba(28, 40, 34, 0.78);
+
+  --nav-offset: clamp(8px, 0.8vw, 14px);
+  --nav-height: 72px;
+}
+
+@theme {
+  --color-paper: var(--paper);
+  --color-forest: var(--forest);
+  --color-ink: var(--ink);
+  --color-cream: var(--cream);
+  --color-stone: var(--stone);
+  --color-clay: var(--clay);
+  --color-sage: var(--sage);
+  --color-taupe: var(--taupe);
+
+  --color-line-dark: var(--line-dark);
+  --color-line-light: var(--line-light);
+  --color-paper-glass: var(--paper-glass);
+  --color-forest-glass: var(--forest-glass);
+
+  --font-serif: var(--font-serif-custom), Georgia, serif;
+  --font-sans: var(--font-sans-custom), system-ui, sans-serif;
+  --font-mono: var(--font-mono-custom), monospace;
+}
+
+.font-mono {
+  font-family: var(--font-sans-custom), "Segoe UI", Arial, sans-serif !important;
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1, "kern" 1;
+}
+
+/* Core styles and resets */
+/* ----------------------------------------
+   Core viewport and layout foundation
+----------------------------------------- */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: clip;
+  scroll-behavior: auto;
+}
+
+body {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: 100dvh;
+  margin: 0;
+
+  font-family: var(--font-sans-custom), system-ui, sans-serif;
+  background-color: var(--paper);
+  color: var(--ink);
+
+  overflow-x: clip;
+  position: relative;
+}
+
+main {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
+}
+
+main > section {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+}
+
+/* Fallback for browsers without overflow: clip support */
+@supports not (overflow: clip) {
+  html,
+  body,
+  main {
+    overflow-x: hidden;
+  }
+}
+
+/* Subtle Fixed Paper Grain Overlay */
+.grain-overlay {
+  position: fixed;
+  inset: 0;
+  width: auto;
+  height: auto;
+  content: "";
+  opacity: 0.035;
+  pointer-events: none;
+  z-index: 9999;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+/* Accessibility: Respect prefers-reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Custom Water Droplet & Morph Keyframes & Styles */
+@keyframes morph {
+  0% {
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+
+  50% {
+    border-radius: 30% 60% 70% 40% / 50% 60% 30% 60%;
+  }
+
+  100% {
+    border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+  }
+}
+
+@keyframes float-droplet {
+  0% {
+    transform: translateY(0px) rotate(0deg);
+  }
+
+  50% {
+    transform: translateY(-6px) rotate(2deg);
+  }
+
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+}
+
+.animate-morph {
+  animation: morph 8s ease-in-out infinite;
+}
+
+.animate-float-droplet {
+  animation: float-droplet 6s ease-in-out infinite;
+}
+
+/* Orbiting Animation Keyframes and Variables */
+/* ----------------------------------------
+   Orbiting Ceramic Project Seals
+----------------------------------------- */
+
+:root {
+  --orbit-radius: clamp(154px, 20vw + 38px, 248px);
+}
+
+@media (min-width: 768px) {
+  :root {
+    --orbit-radius: clamp(176px, 15vw + 40px, 270px);
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --orbit-radius: clamp(194px, 12vw + 42px, 286px);
+  }
+}
+
+/* The carrier owns only the orbital transform */
+.orbit-carrier {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  z-index: 100;
+  will-change: transform;
+}
+
+.orbit-carrier-live {
+  animation: orbit-live 22s linear infinite;
+}
+
+.orbit-carrier-code {
+  animation: orbit-code 22s linear infinite;
+}
+
+/* Begins around the upper-left arc */
+@keyframes orbit-live {
+  from {
+    transform:
+      rotate(-135deg) translateX(var(--orbit-radius)) rotate(135deg);
+  }
+
+  to {
+    transform:
+      rotate(225deg) translateX(var(--orbit-radius)) rotate(-225deg);
+  }
+}
+
+/* Begins opposite the live-site seal */
+@keyframes orbit-code {
+  from {
+    transform:
+      rotate(45deg) translateX(var(--orbit-radius)) rotate(-45deg);
+  }
+
+  to {
+    transform:
+      rotate(405deg) translateX(var(--orbit-radius)) rotate(-405deg);
+  }
+}
+
+/* Pause the path while the actual seal is being used */
+.orbit-carrier:has(.orbiting-seal:hover),
+.orbit-carrier:has(.orbiting-seal:focus-visible) {
+  z-index: 100;
+  animation-play-state: paused;
+}
+
+/* The seal owns only visual and interaction transforms */
+.orbiting-seal {
+  position: absolute;
+  top: 0;
+  left: 0;
+
+  width: clamp(72px, 5.2vw, 84px);
+  height: clamp(72px, 5.2vw, 84px);
+
+  transform: translate(-50%, -50%);
+  transform-origin: center;
+
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 5px;
+
+  border-radius:
+    48% 52% 47% 53% / 51% 46% 54% 49%;
+
+  font-family: var(--font-mono-custom), monospace;
+  font-size: clamp(8px, 0.65vw, 10px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.08em;
+  text-align: center;
+
+  pointer-events: auto;
+  cursor: pointer;
+  user-select: none;
+
+  transition:
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 320ms ease,
+    border-color 320ms ease,
+    box-shadow 420ms ease,
+    background 420ms ease;
+
+  will-change: transform;
+}
+
+/* Fine engraved inner ring */
+.orbiting-seal::after {
+  content: "";
+  position: absolute;
+  inset: 6px;
+  border: 1px solid rgba(28, 40, 34, 0.12);
+  border-radius: inherit;
+  pointer-events: none;
+}
+
+/* Warm matte porcelain — live site */
+.orbiting-seal-live {
+  color: var(--forest);
+
+  background:
+    radial-gradient(circle at 32% 25%,
+      rgba(255, 255, 255, 0.38) 0%,
+      rgba(255, 255, 255, 0.08) 18%,
+      transparent 34%),
+    linear-gradient(145deg,
+      #f6f2e9 0%,
+      #e4ddd0 58%,
+      #cbbdad 100%);
+
+  border: 1px solid rgba(196, 124, 90, 0.38);
+
+  box-shadow:
+    0 18px 38px rgba(6, 12, 9, 0.28),
+    0 4px 12px rgba(6, 12, 9, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.72),
+    inset 0 -10px 20px rgba(28, 40, 34, 0.07);
+}
+
+/* Dark ceramic — source code */
+.orbiting-seal-code {
+  color: var(--cream);
+
+  background:
+    radial-gradient(circle at 30% 23%,
+      rgba(245, 241, 232, 0.2) 0%,
+      rgba(245, 241, 232, 0.07) 17%,
+      transparent 34%),
+    linear-gradient(145deg,
+      #314239 0%,
+      #1a2921 48%,
+      #101813 100%);
+
+  border: 1px solid rgba(245, 241, 232, 0.34);
+
+  box-shadow:
+    0 18px 40px rgba(5, 10, 7, 0.45),
+    0 5px 14px rgba(5, 10, 7, 0.28),
+    0 0 0 1px rgba(196, 124, 90, 0.08),
+    inset 0 1px 0 rgba(245, 241, 232, 0.24),
+    inset 0 -12px 22px rgba(0, 0, 0, 0.22);
+}
+
+.orbiting-seal-code::after {
+  inset: 7px;
+  border-color: rgba(245, 241, 232, 0.16);
+}
+
+.orbiting-seal-label {
+  max-width: 54px;
+}
+
+.orbiting-seal-arrow {
+  display: block;
+  color: var(--clay);
+  font-size: 14px;
+
+  transition:
+    transform 420ms cubic-bezier(0.22, 1, 0.36, 1),
+    color 320ms ease;
+}
+
+/* The inner seal can now scale without breaking its orbit */
+.orbiting-seal:hover,
+.orbiting-seal:focus-visible {
+  transform:
+    translate(-50%, -50%) translateY(-2px) scale(1.065);
+
+  outline: none;
+}
+
+.orbiting-seal-live:hover,
+.orbiting-seal-live:focus-visible {
+  color: var(--clay);
+
+  border-color: rgba(196, 124, 90, 0.68);
+
+  box-shadow:
+    0 22px 46px rgba(6, 12, 9, 0.34),
+    0 0 24px rgba(196, 124, 90, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.82),
+    inset 0 -10px 20px rgba(196, 124, 90, 0.09);
+}
+
+.orbiting-seal-code .orbiting-seal-label {
+  color: var(--cream);
+  text-shadow: 0 1px 8px rgba(0, 0, 0, 0.35);
+}
+
+.orbiting-seal-code .orbiting-seal-arrow {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+
+  color: var(--clay);
+  background: rgba(196, 124, 90, 0.12);
+  border: 1px solid rgba(196, 124, 90, 0.32);
+}
+
+.orbiting-seal-code:hover,
+.orbiting-seal-code:focus-visible {
+  border-color: rgba(196, 124, 90, 0.7);
+
+  box-shadow:
+    0 22px 48px rgba(5, 10, 7, 0.5),
+    0 0 28px rgba(196, 124, 90, 0.14),
+    inset 0 1px 0 rgba(245, 241, 232, 0.3),
+    inset 0 -12px 22px rgba(0, 0, 0, 0.2);
+}
+
+.orbiting-seal:hover .orbiting-seal-arrow,
+.orbiting-seal:focus-visible .orbiting-seal-arrow {
+  transform: translate(2px, -2px);
+}
+
+.orbiting-seal:focus-visible {
+  outline: 2px solid var(--clay);
+  outline-offset: 5px;
+}
+
+.orbiting-seal:active {
+  transform:
+    translate(-50%, -50%) scale(0.98);
+}
+
+/* Mobile: smaller and calmer */
+@media (max-width: 767px) {
+  .orbiting-seal {
+    width: 66px;
+    height: 66px;
+    font-size: 7px;
+  }
+
+  .orbiting-seal-arrow {
+    font-size: 12px;
+  }
+}
+
+/* Accessible static positioning */
+@media (prefers-reduced-motion: reduce) {
+  .orbit-carrier {
+    animation: none !important;
+  }
+
+  .orbit-carrier-live {
+    transform:
+      rotate(-135deg) translateX(var(--orbit-radius)) rotate(135deg);
+  }
+
+  .orbit-carrier-code {
+    transform:
+      rotate(45deg) translateX(var(--orbit-radius)) rotate(-45deg);
+  }
+}
+
+
+
+/* ----------------------------------------
+   3D Folded Paper Planes
+----------------------------------------- */
+#experience {
+  --nav-safe-top: clamp(105px, 8vw, 135px);
+  --experience-inline-padding: clamp(24px, 5vw, 88px);
+  --experience-bottom-safe: clamp(28px, 5vh, 72px);
+
+  border-radius: 40px 40px 0 0;
+  box-shadow: 0 -20px 40px rgba(16, 23, 18, 0.15);
+  transition: border-radius 0.6s ease;
+  z-index: 10;
+}
+
+@media (min-width: 768px) {
+  .experience-stage-3d {
+    perspective: 1800px;
+    transform-style: preserve-3d;
+  }
+
+  .plane-shadow-sage {
+    box-shadow: 0 15px 35px rgba(28, 40, 34, 0.22), 0 5px 15px rgba(28, 40, 34, 0.14);
+  }
+
+  .plane-shadow-cream {
+    box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.05), 0 25px 50px rgba(0, 0, 0, 0.16);
+  }
+}
+
+@media (max-width: 767px) {
+  #experience {
+    border-radius: 20px 20px 0 0 !important;
+  }
+}
+
+/* Hide scrollbar utility */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* ----------------------------------------
+   Contact Section & Footer Styles
+----------------------------------------- */
+.text-reveal-line {
+  background: linear-gradient(to right, var(--forest) 50%, rgba(28, 40, 34, 0.3) 50%);
+  background-size: 200% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+  transform: translateY(14px);
+  will-change: background-position, transform;
+}
+
+.text-reveal-line-white {
+  background: linear-gradient(to right, #FAF8F5 50%, rgba(250, 248, 245, 0.3) 50%);
+  background-size: 200% 100%;
+  background-position: 100% 0;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  display: inline-block;
+  transform: translateY(14px);
+  will-change: background-position, transform;
+}
